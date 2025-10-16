@@ -730,6 +730,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 273de247dcba66048a6d0aca9a68bb9e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::asdfasdasd
+  target: {fileID: 1235526866}
+  offset: {x: 0, y: 0, z: -10}
+  smoothSpeed: 5
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
@@ -826,7 +829,7 @@ GameObject:
   - component: {fileID: 1235526865}
   - component: {fileID: 1235526864}
   - component: {fileID: 1235526863}
-  - component: {fileID: 1235526867}
+  - component: {fileID: 1235526862}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -834,6 +837,27 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &1235526862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1235526861}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ef46fd2d3cbf5f4b9cf5e260204c3cc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NewMonoBehaviourScript
+  moveSpeed: 5
+  jumpForce: 10
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  groundCheck: {fileID: 1947653680}
+  Wall_R_Check: {fileID: 0}
+  Wall_L_Check: {fileID: 0}
+  GizSize: 0.1
 --- !u!50 &1235526863
 Rigidbody2D:
   serializedVersion: 5
@@ -857,9 +881,9 @@ Rigidbody2D:
   m_ExcludeLayers:
     serializedVersion: 2
     m_Bits: 0
-  m_Interpolate: 1
+  m_Interpolate: 0
   m_SleepingMode: 1
-  m_CollisionDetection: 1
+  m_CollisionDetection: 0
   m_Constraints: 4
 --- !u!70 &1235526864
 CapsuleCollider2D:
@@ -974,25 +998,6 @@ Transform:
   - {fileID: 277157686}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1235526867
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1235526861}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8ef46fd2d3cbf5f4b9cf5e260204c3cc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NewMonoBehaviourScript
-  moveSpeed: 5
-  jumpForce: 10
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 64
-  groundCheck: {fileID: 1947653680}
-  groundRadius: 0.14
 --- !u!1 &1313937333
 GameObject:
   m_ObjectHideFlags: 0
