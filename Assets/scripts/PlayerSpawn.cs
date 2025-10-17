@@ -1,7 +1,7 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+[DefaultExecutionOrder(100)]
 public class PlayerSpawn : MonoBehaviour
 {
     private void OnEnable()
@@ -14,17 +14,41 @@ public class PlayerSpawn : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    private void Start()
     {
-        // Si un portail a demandé un spawn précis, on l'utilise.
-        var spawnId = SceneLoader.PendingSpawnId;
-        if (string.IsNullOrEmpty(spawnId)) return;
+        PlaceAtSpawn();
+    }
 
-        var all = FindObjectsOfType<SpawnPoint>();
-        var target = all.FirstOrDefault(s => s.id == spawnId);
+    private void OnSceneLoaded(Scene s, LoadSceneMode m)
+    {
+        PlaceAtSpawn();
+    }
+
+    private void PlaceAtSpawn()
+    {
+        string wanted = (SceneLoader.Instance != null) ? SceneLoader.Instance.pendingSpawnId : "";
+
+        var points = Object.FindObjectsByType<SpawnPoint>(FindObjectsSortMode.None);
+        SpawnPoint target = null;
+
+        if (!string.IsNullOrEmpty(wanted))
+        {
+            foreach (var p in points) { if (p.id == wanted) { target = p; break; } }
+        }
+        if (target == null)
+        {
+            foreach (var p in points) { if (p.isDefault) { target = p; break; } }
+        }
+        if (target == null && points.Length > 0) target = points[0];
+
         if (target != null)
         {
             transform.position = target.transform.position;
+            if (SceneLoader.Instance != null) SceneLoader.Instance.pendingSpawnId = "";
+        }
+        else
+        {
+            Debug.LogWarning("PlayerSpawn: aucun SpawnPoint dans la scène.");
         }
     }
 }
