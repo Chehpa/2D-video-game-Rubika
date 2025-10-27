@@ -1,16 +1,41 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class CameraFollow : MonoBehaviour
 {
-    public Transform target;
-    public Vector3 offset = new Vector3(0f, 0f, -10f);
-    public float smoothSpeed = 5f;
+    public Transform target;                 // Laisse vide dans l’Inspector
+    public Vector3 offset = new Vector3(0, 0, -10f);
+    public float smooth = 10f;
+
+    void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        TryBind();
+    }
+
+    void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    void OnSceneLoaded(Scene s, LoadSceneMode m)
+    {
+        TryBind();
+    }
+
+    void TryBind()
+    {
+        if (target == null)
+        {
+            var playerGO = GameObject.FindGameObjectWithTag("Player");
+            if (playerGO != null) target = playerGO.transform;
+        }
+    }
 
     void LateUpdate()
     {
-        if (target == null) return;
-        Vector3 desiredPosition = target.position + offset;
-        Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, smoothSpeed * Time.deltaTime);
-        transform.position = smoothedPosition;
+        if (!target) return;
+        Vector3 desired = target.position + offset;
+        transform.position = Vector3.Lerp(transform.position, desired, Time.deltaTime * smooth);
     }
 }
