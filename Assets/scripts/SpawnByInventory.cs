@@ -1,58 +1,81 @@
-﻿using System.Collections;
-using UnityEngine;
+﻿using UnityEngine;
 
-// Put this on any pickup / object that should appear or not depending on inventory.
+/// Affiche/masque un objet selon l'inventaire du joueur (IDs string).
+/// Place ce script sur l'objet à activer/désactiver (ou renseigne Target).
 public class SpawnByInventory : MonoBehaviour
 {
-    public enum Mode
+    public enum RuleMode
     {
-        HideIfOwned,     // Hide the object if the player already owns the item (default)
-        ShowOnlyIfOwned  // Show the object only if the player already owns the item
+        HideIfHas,      // cache si le joueur POSSEDE l'item
+        HideIfNotHas,   // cache si le joueur NE POSSEDE PAS l'item
+        ShowIfHas,      // montre seulement si le joueur a l'item
+        ShowIfNotHas    // montre seulement si le joueur n'a PAS l'item
     }
 
-    [Header("Rule")]
-    public ItemType item;           // e.g. HairPin
-    public Mode mode = Mode.HideIfOwned;
+    [Header("Condition")]
+    [Tooltip("ID d'inventaire (ex: Glass, HairPin, Rope, …)")]
+    public string itemId = "HairPin";
+    public RuleMode mode = RuleMode.HideIfHas;
 
-    [Tooltip("If null, this GameObject is toggled. Otherwise only this target is toggled.")]
+    [Header("Cible (optionnel)")]
+    [Tooltip("Si vide, c'est ce GameObject qui est activé/désactivé")]
     public GameObject target;
 
-    [Tooltip("Tiny delay so the Player/Inventory exists after scene load.")]
+    [Header("Timing")]
+    [Tooltip("Petit délai pour laisser l'inventaire s'initialiser")]
     public float startDelay = 0.01f;
 
-    private void Reset()
+    void Awake()
     {
         if (target == null) target = gameObject;
     }
 
-    private IEnumerator Start()
+    void OnEnable()
+    {
+        if (startDelay > 0f) Invoke(nameof(Refresh), startDelay);
+        else Refresh();
+    }
+
+    void OnValidate()
     {
         if (target == null) target = gameObject;
+#if UNITY_EDITOR
+        if (!UnityEditor.EditorApplication.isPlaying)
+            Apply(HasItemInScene());
+#endif
+    }
 
-        // Wait one frame (or a tiny delay) to let the persistent Player be present.
-        if (startDelay > 0f) yield return new WaitForSeconds(startDelay);
-        else yield return null;
+    void Refresh() => Apply(HasItemInScene());
 
-        var inv = FindInventory();
-        if (inv == null)
+    bool HasItemInScene()
+    {
+        PlayerInventory inv = null;
+
+#if UNITY_2023_1_OR_NEWER
+        inv = Object.FindFirstObjectByType<PlayerInventory>(FindObjectsInactive.Include);
+#else
+        inv = Object.FindObjectOfType<PlayerInventory>();
+#endif
+        if (inv == null) return false;
+        return inv.Has(itemId);
+    }
+
+    void Apply(bool has)
+    {
+        if (target == null) return;
+
+        bool show = true;
+        switch (mode)
         {
-            Debug.LogWarning("[SpawnByInventory] No PlayerInventory found.");
-            yield break;
+            case RuleMode.HideIfHas: show = !has; break;
+            case RuleMode.HideIfNotHas: show = has; break;
+            case RuleMode.ShowIfHas: show = has; break;
+            case RuleMode.ShowIfNotHas: show = !has; break;
         }
-
-        bool has = inv.Has(item);
-        bool show = (mode == Mode.HideIfOwned) ? !has : has;
         target.SetActive(show);
     }
 
-    private PlayerInventory FindInventory()
-    {
-        PlayerInventory inv = null;
-#if UNITY_2023_1_OR_NEWER || UNITY_2022_2_OR_NEWER
-        inv = Object.FindFirstObjectByType<PlayerInventory>();
-#else
-            inv = Object.FindObjectOfType<PlayerInventory>();
-#endif
-        return inv;
-    }
+    // Helpers compat (anciens noms éventuels)
+    public string Item => itemId;
+    public void SetItem(string id) { itemId = id; Refresh(); }
 }

@@ -1,104 +1,107 @@
 ﻿using UnityEngine;
 
 [RequireComponent(typeof(Collider2D))]
-public class DoorSwap : MonoBehaviour, IInteractable
+public class DoorSwap : MonoBehaviour
 {
     [Header("Lock")]
-    public bool requireHairPin = true;   // Exiger la HairPin pour OUVRIR
-    public bool allowToggle = false;     // Autoriser la FERMETURE (E à nouveau)
+    [Tooltip("ID requis dans l'inventaire (ex: HairPin)")]
+    public string requiredItemId = "HairPin";
+    [Tooltip("Consommer l'objet à l'ouverture ?")]
+    public bool consumeItem = false;
 
-    [Header("References")]
-    [SerializeField] private GameObject closedGO;          // enfant "Closed"
-    [SerializeField] private GameObject openGO;            // enfant "Open"
-    [SerializeField] private Collider2D blockingCollider;  // collider de "Closed"
-    [SerializeField] private SpriteRenderer parentSR;      // SR du parent (si existe)
+    [Header("Visuals / Collisions")]
+    [Tooltip("Visuel porte fermée (optionnel)")]
+    public GameObject closedGO;
+    [Tooltip("Visuel porte ouverte (optionnel)")]
+    public GameObject openGO;
+    [Tooltip("Collider plein qui bloque le passage quand c'est fermé")]
+    public Collider2D blockingCollider;
 
-    private bool isOpen;
+    [Header("UI")]
+    public string needText = "Door: it's locked… need a hair pin.";
 
-    public string Prompt
-        => isOpen
-           ? (allowToggle ? "Close [E]" : "")
-           : (requireHairPin ? "Pick the lock [E]" : "Open [E]");
+    bool _isOpen;
 
     void Reset()
     {
+        // Le collider porteur de ce script sert de trigger d'activation
         var col = GetComponent<Collider2D>();
-        col.isTrigger = true;
-        gameObject.layer = LayerMask.NameToLayer("Interactable");
+        if (col) col.isTrigger = true;
 
-        var tClosed = transform.Find("Closed");
-        var tOpen = transform.Find("Open");
-        if (!closedGO && tClosed) closedGO = tClosed.gameObject;
-        if (!openGO && tOpen) openGO = tOpen.gameObject;
-
-        if (!blockingCollider && closedGO)
-            blockingCollider = closedGO.GetComponent<Collider2D>();
-
-        if (!parentSR)
-            parentSR = GetComponent<SpriteRenderer>();
-    }
-
-    void OnEnable()
-    {
-        if (parentSR) parentSR.enabled = false; // masque le SR du parent si jamais
-        SetState(false);                         // démarre fermée
-    }
-
-    public void Interact(PlayerInventory inv)
-    {
-        if (!isOpen)
+        // Essaie de deviner un collider bloquant sur ce GO si rien n'est réglé
+        if (blockingCollider == null)
         {
-            bool canOpen = !requireHairPin || (inv != null && inv.Has(ItemType.HairPin));
-            if (canOpen)
+            // Si on a deux colliders: le 1er trigger (ce script), le 2e blocant
+            var cols = GetComponents<Collider2D>();
+            if (cols.Length > 1)
             {
-                SetState(true);
-                Debug.Log("[Door] Opened.");
-            }
-            else
-            {
-                Debug.Log("[Door] It's locked… need a hair pin.");
-            }
-        }
-        else if (allowToggle)
-        {
-            SetState(false);
-            Debug.Log("[Door] Closed.");
-        }
-    }
-
-    private void SetState(bool open)
-    {
-        isOpen = open;
-
-        if (closedGO) closedGO.SetActive(!open);
-        if (openGO)
-        {
-            openGO.SetActive(open);
-
-            // Sécurise l’affichage d’Open
-            var srOpen = openGO.GetComponent<SpriteRenderer>();
-            if (srOpen)
-            {
-                srOpen.enabled = open;
-                var c = srOpen.color; c.a = 1f; srOpen.color = c;
-
-                // Copie le tri de Closed → Open (si présent)
-                if (closedGO)
-                {
-                    var srClosed = closedGO.GetComponent<SpriteRenderer>();
-                    if (srClosed)
-                    {
-                        srOpen.sortingLayerID = srClosed.sortingLayerID;
-                        srOpen.sortingOrder = srClosed.sortingOrder;
-                    }
-                    openGO.transform.position = closedGO.transform.position;
-                }
+                foreach (var c in cols)
+                    if (!c.isTrigger) { blockingCollider = c; break; }
             }
         }
 
-        if (blockingCollider) blockingCollider.enabled = !open; // bloque seulement fermée
+        Refresh();
     }
 
-    [ContextMenu("Force Open")] private void ForceOpen() => SetState(true);
-    [ContextMenu("Force Close")] private void ForceClose() => SetState(false);
+    void OnValidate() { Refresh(); }
+
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        if (!other.CompareTag("Player")) return;
+
+        var inv = other.GetComponentInParent<PlayerInventory>() ?? FindObjectOfType<PlayerInventory>();
+        if (inv == null)
+        {
+            Debug.LogWarning("[DoorSwap] Aucun PlayerInventory trouvé.");
+            return;
+        }
+
+        if (inv.HasItem(requiredItemId))
+        {
+            Open(inv);
+        }
+        else
+        {
+            Debug.Log($"[Door] {needText}");
+        }
+    }
+
+    public void Open(PlayerInventory inv = null)
+    {
+        if (_isOpen) return;
+        _isOpen = true;
+
+        if (consumeItem && inv != null)
+            inv.RemoveItem(requiredItemId);
+
+        if (blockingCollider) blockingCollider.enabled = false;
+        if (closedGO) closedGO.SetActive(false);
+        if (openGO) openGO.SetActive(true);
+    }
+
+    public void Close()
+    {
+        _isOpen = false;
+        if (blockingCollider) blockingCollider.enabled = true;
+        if (closedGO) closedGO.SetActive(true);
+        if (openGO) closedGO.SetActive(true);
+        if (openGO) openGO.SetActive(false);
+    }
+
+    void Refresh()
+    {
+        // Met l'état visuel cohérent dans l’éditeur
+        if (_isOpen)
+        {
+            if (blockingCollider) blockingCollider.enabled = false;
+            if (closedGO) closedGO.SetActive(false);
+            if (openGO) openGO.SetActive(true);
+        }
+        else
+        {
+            if (blockingCollider) blockingCollider.enabled = true;
+            if (closedGO) closedGO.SetActive(true);
+            if (openGO) openGO.SetActive(false);
+        }
+    }
 }

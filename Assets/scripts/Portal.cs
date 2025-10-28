@@ -1,36 +1,104 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Linq;
+using System.Reflection;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
-public class Portal : MonoBehaviour, IInteractable
+[RequireComponent(typeof(Collider2D))]
+public class Portal : MonoBehaviour
 {
     [Header("Destination")]
-    public string destinationScene;   // ex: "Room2"
-    public string destinationSpawnId; // ex: "FromRoom1"
+    public string destinationScene = "Room2";
+    public string destinationSpawnName = "FromRoom1";
 
-    [Header("Option")]
-    public bool requireHairPin = false;
+    [Header("Condition (inventaire)")]
+    public bool requireItem = true;
+    [Tooltip("ID requis dans l’inventaire (ex: HairPin)")]
+    public string requiredItemId = "HairPin";
+    public bool consumeItem = false;
 
-    public string Prompt => requireHairPin ? "Open door (E)" : "Go (E)";
+    [Header("UI")]
+    public string needText = "Door: it's locked… need a hair pin.";
 
     private void Reset()
     {
         var col = GetComponent<Collider2D>();
-        if (!col) col = gameObject.AddComponent<BoxCollider2D>();
-        col.isTrigger = true;
-        gameObject.layer = LayerMask.NameToLayer("Interactable");
+        if (col) col.isTrigger = true;
     }
 
-    public void Interact(PlayerInventory inv)
+    private void OnTriggerEnter2D(Collider2D other)
     {
-        if (requireHairPin && !inv.Has(ItemType.HairPin))
+        if (!other.CompareTag("Player")) return;
+
+        // Vérifie l’inventaire si requis
+        if (requireItem)
         {
-            Debug.Log("Locked. Need HairPin.");
-            return;
+            var inv = other.GetComponentInParent<PlayerInventory>() ?? FindObjectOfType<PlayerInventory>();
+            if (inv == null)
+            {
+                Debug.LogWarning("[Portal] Aucun PlayerInventory trouvé.");
+                return;
+            }
+
+            if (!inv.Has(requiredItemId))
+            {
+                if (!string.IsNullOrEmpty(needText))
+                    Debug.Log($"[Portal] {needText}");
+                return;
+            }
+
+            if (consumeItem) inv.Remove(requiredItemId);
         }
-        if (string.IsNullOrEmpty(destinationScene))
+
+        // Informe le chargeur de scène du prochain spawn (si présent dans le projet)
+        TrySetNextSpawnName(destinationSpawnName);
+
+        // Charge la scène
+        if (!string.IsNullOrEmpty(destinationScene))
+            SceneManager.LoadScene(destinationScene);
+        else
+            Debug.LogWarning("[Portal] destinationScene est vide.");
+    }
+
+    /// <summary>
+    /// Essaie, via réflexion, de régler un point de spawn sur un éventuel SceneLoader.
+    /// Recherche les membres statiques suivants (dans cet ordre):
+    ///  - Field/Property: NextSpawnPointName / nextSpawnPointName
+    ///  - Method: SetNextSpawn(string) / SetSpawn(string)
+    /// </summary>
+    private static void TrySetNextSpawnName(string spawnName)
+    {
+        if (string.IsNullOrEmpty(spawnName)) return;
+
+        try
         {
-            Debug.LogWarning("Portal: destinationScene is empty.");
-            return;
+            var sceneLoaderType = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(a => a.GetTypes())
+                .FirstOrDefault(t => t.Name == "SceneLoader");
+
+            if (sceneLoaderType == null) return;
+
+            // Fields
+            var f = sceneLoaderType.GetField("NextSpawnPointName",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                    ?? sceneLoaderType.GetField("nextSpawnPointName",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (f != null) { f.SetValue(null, spawnName); return; }
+
+            // Properties
+            var p = sceneLoaderType.GetProperty("NextSpawnPointName",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                    ?? sceneLoaderType.GetProperty("nextSpawnPointName",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (p != null && p.CanWrite) { p.SetValue(null, spawnName); return; }
+
+            // Methods
+            var m = sceneLoaderType.GetMethod("SetNextSpawn",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic)
+                    ?? sceneLoaderType.GetMethod("SetSpawn",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            if (m != null) { m.Invoke(null, new object[] { spawnName }); }
         }
-        SceneLoader.Load(destinationScene, destinationSpawnId);
+        catch { /* silencieux pour éviter les crashs en build */ }
     }
 }

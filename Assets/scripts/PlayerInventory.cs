@@ -1,17 +1,25 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerInventory : MonoBehaviour
 {
-    private readonly HashSet<ItemType> items = new();
+    private readonly HashSet<string> _items = new HashSet<string>();
 
-    public bool Has(ItemType t) => items.Contains(t);
-
-    public void Add(ItemType t)
+    // API moderne
+    public bool HasItem(string id) => !string.IsNullOrEmpty(id) && _items.Contains(id);
+    public void AddItem(string id)
     {
-        if (items.Add(t))
-            Debug.Log($"[Inventory] Picked up: {t}");
+        if (string.IsNullOrEmpty(id)) return;
+        if (_items.Add(id)) Debug.Log($"[Inv] +{id}");
+    }
+    public void RemoveItem(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        if (_items.Remove(id)) Debug.Log($"[Inv] -{id}");
     }
 
-    public void ClearAll() => items.Clear();
+    // 🔧 Alias pour compat: d'autres scripts appellent Has/Add/Remove
+    public bool Has(string id) => HasItem(id);
+    public void Add(string id) => AddItem(id);
+    public void Remove(string id) => RemoveItem(id);
 }
