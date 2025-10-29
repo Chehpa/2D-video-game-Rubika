@@ -2,32 +2,21 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Singleton simple pour des flags globaux persistants.
-/// Accès statique: GameState.IsSet/Set/Clear/ClearAll.
-/// </summary>
 public class GameState : MonoBehaviour
 {
     public static GameState Instance { get; private set; }
 
-    private readonly HashSet<string> _flags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+    readonly HashSet<string> _flags = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     public event Action<string> OnFlagChanged;
 
-    private void Awake()
+    void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
     }
 
-    public static bool IsSet(string name)
-    {
-        return Instance != null && Instance._flags.Contains(name);
-    }
+    public static bool IsSet(string name) => Instance != null && Instance._flags.Contains(name);
 
     public static void Set(string name)
     {
@@ -52,8 +41,6 @@ public class GameState : MonoBehaviour
     public static void ClearAll()
     {
         if (Instance == null) return;
-        if (Instance._flags.Count == 0) return;
-
         Instance._flags.Clear();
         Instance.OnFlagChanged?.Invoke("*");
         Debug.Log("[Flag] cleared all");

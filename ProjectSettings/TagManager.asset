@@ -3,19 +3,20 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 3
-  tags: []
+  tags:
+  - Chair
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Gate
   - Water
   - UI
   - Ground
   - Interactable
-  - 
-  - 
-  - 
+  - Pickup
+  - Player
+  - Pushable
   - 
   - 
   - 
