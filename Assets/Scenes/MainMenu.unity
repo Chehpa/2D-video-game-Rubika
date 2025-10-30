@@ -227,7 +227,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c065a16ff147724582585918e64060d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Menu
-  levelToLoad: Room1
+  levelToLoad: Level_01
 --- !u!4 &247741959
 Transform:
   m_ObjectHideFlags: 0

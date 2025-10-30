@@ -1,23 +1,40 @@
-// UnlockColliderByInventory.cs
 using UnityEngine;
+
+[RequireComponent(typeof(Collider2D))]
 public class UnlockColliderByInventory : MonoBehaviour
 {
-    public ItemId requiredItem;
-    public FlagId setFlagOnUnlock = 0;
+    public ItemId requiredItem = ItemId.HairPin;
+    public FlagId setOnUnlock = FlagId.F_DoorOpen;
     public GameObject[] enableOnUnlock;
     public GameObject[] disableOnUnlock;
+    public bool consumeItem = false;
 
-    bool unlocked;
+    void Reset() { var c = GetComponent<Collider2D>(); c.isTrigger = true; }
 
     void OnTriggerEnter2D(Collider2D other)
     {
-        if (unlocked) return;
         if (!other.CompareTag("Player")) return;
-        if (!GameStateHost.I.HasItem(requiredItem)) return;
 
-        unlocked = true;
-        if (setFlagOnUnlock != 0) GameStateHost.I.SetFlag(setFlagOnUnlock);
-        foreach (var go in enableOnUnlock) if (go) go.SetActive(true);
-        foreach (var go in disableOnUnlock) if (go) go.SetActive(false);
+        // Blindages anti-NullRef
+        if (GameStateHost.I == null)
+        {
+            Debug.LogWarning("[UnlockColliderByInventory] GameStateHost absent, ignore.");
+            return;
+        }
+
+        if (!GameStateHost.I.HasItem(requiredItem))
+        {
+            Debug.Log("[Portal] Door: it's locked... need a hair pin.");
+            return;
+        }
+
+        if (consumeItem) GameStateHost.I.RemoveItem(requiredItem);
+        GameStateHost.I.SetFlag(setOnUnlock);
+
+        if (enableOnUnlock != null)
+            foreach (var go in enableOnUnlock) if (go) go.SetActive(true);
+
+        if (disableOnUnlock != null)
+            foreach (var go in disableOnUnlock) if (go) go.SetActive(false);
     }
 }

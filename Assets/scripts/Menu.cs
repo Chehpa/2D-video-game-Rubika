@@ -3,10 +3,8 @@ using UnityEngine.SceneManagement;
 
 public class Menu : MonoBehaviour
 {
-    [Header("Level to load on Play/Restart")]
-    public string levelToLoad = "Room1";
+    public string levelToLoad = "Level_01";
 
-#if UNITY_EDITOR
     public void StartGame()
     {
         SceneManager.LoadScene(levelToLoad);
@@ -20,8 +18,4 @@ public class Menu : MonoBehaviour
         Application.Quit();
 #endif
     }
-#else
-    public void StartGame() => SceneManager.LoadScene(levelToLoad);
-    public void QuitGame() => Application.Quit();
-#endif
 }

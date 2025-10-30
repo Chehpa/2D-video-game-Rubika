@@ -1,47 +1,34 @@
+using System.Linq;
 using UnityEngine;
 
-[RequireComponent(typeof(Collider2D))]
+[DisallowMultipleComponent]
 public class UnlockRope : MonoBehaviour
 {
-    [Header("Zones & conditions")]
-    public Collider2D useZone;          // zone trigger au niveau de la corde (sur la chaise)
-    public string playerTag = "Player";
-    public DockArea2D chairDock;        // DockArea2D près du pendu (chaise à la bonne place)
-    public string requiredFlag = "F_HandsFree"; // mains libres nécessaires
+    public DockArea2D dock;
+    void Awake() { TryAutoWire(); }
+    void Reset() { TryAutoWire(); }
 
-    [Header("Effets")]
-    public GameObject[] disableOnUnlock;  // sprite+colliders de la corde
-    public GameObject[] enableOnUnlock;   // sprite corde coupée (optionnel)
-    public string flagToSet = "F_RopeCut";
-
-    Collider2D _selfCol;
-
-    void Reset() { _selfCol = GetComponent<Collider2D>(); if (_selfCol) _selfCol.isTrigger = true; }
-
-    void OnTriggerStay2D(Collider2D other)
+    void TryAutoWire()
     {
-        if (!other.CompareTag(playerTag)) return;
-
-        // 1) mains libres ?
-        if (!GameState.IsSet(requiredFlag)) return;
-
-        // 2) chaise dockée ?
-        if (chairDock != null && !chairDock.IsDocked) return;
-
-        // 3) joueur debout sur la chaise (dans la zone haute) ?
-        if (useZone != null && !useZone.IsTouching(other)) return;
-
-        DoUnlock();
+        if (dock != null) return;
+        dock = GetComponent<DockArea2D>();
+        if (dock != null) return;
+        dock = GetComponentInParent<DockArea2D>(true);
+        if (dock != null) return;
+        var all = Resources.FindObjectsOfTypeAll<DockArea2D>();
+        dock = all.FirstOrDefault();
     }
 
-    void DoUnlock()
+    public void TryCut()
     {
-        if (disableOnUnlock != null) foreach (var go in disableOnUnlock) if (go) go.SetActive(false);
-        if (enableOnUnlock != null) foreach (var go in enableOnUnlock) if (go) go.SetActive(true);
+        if (dock == null) { Debug.LogWarning("[UnlockRope] Aucune DockArea2D trouvée.", this); return; }
+        if (dock.CanCutNow()) dock.ForceCut();
+    }
 
-        if (!string.IsNullOrEmpty(flagToSet)) GameState.Set(flagToSet);
-
-        if (_selfCol != null) _selfCol.enabled = false; // éviter les doubles déclenchements
-        Debug.Log("[Rope] Corde coupée.");
+    void OnTriggerEnter2D(Collider2D other)
+    {
+        if (dock == null) return;
+        if (other.GetComponent<PushableKinematic2D>() == null) return;
+        TryCut();
     }
 }

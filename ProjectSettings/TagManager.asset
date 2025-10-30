@@ -5,18 +5,20 @@ TagManager:
   serializedVersion: 3
   tags:
   - Chair
+  - Goal
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - Gate
+  - 
   - Water
   - UI
   - Ground
-  - Interactable
-  - Pickup
   - Player
+  - Pickup
+  - 
   - Pushable
+  - Interactable
   - 
   - 
   - 
@@ -24,8 +26,7 @@ TagManager:
   - 
   - 
   - 
-  - 
-  - 
+  - Gate
   - 
   - 
   - 
@@ -42,7 +43,7 @@ TagManager:
   - name: Default
     uniqueID: 0
     locked: 0
-  - name: New Layer 1
+  - name: World
     uniqueID: 3260221387
     locked: 0
   - name: New Layer 2

@@ -1,5 +1,5 @@
-// GateByFlag.cs
 using UnityEngine;
+
 public class GateByFlag : MonoBehaviour
 {
     public FlagId requiredFlag;
@@ -8,10 +8,14 @@ public class GateByFlag : MonoBehaviour
 
     void OnEnable()
     {
+        if (GameStateHost.I == null) return;
         GameStateHost.I.OnFlagSet += OnFlag;
         Apply();
     }
-    void OnDisable() { GameStateHost.I.OnFlagSet -= OnFlag; }
+    void OnDisable()
+    {
+        if (GameStateHost.I != null) GameStateHost.I.OnFlagSet -= OnFlag;
+    }
     void OnFlag(FlagId f) { if (f == requiredFlag) Apply(); }
     void Apply()
     {

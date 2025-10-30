@@ -1,137 +1,56 @@
-using UnityEngine;
-using UnityEngine.SceneManagement;
+ï»¿using UnityEngine;
 using TMPro;
 
 public class TimerUI : MonoBehaviour
 {
-    [Header("Wiring")]
-    [Tooltip("Référence au TextMeshProUGUI qui affiche le temps (ex: TimerText)")]
-    public TextMeshProUGUI label;
-
     [Header("Timer")]
-    [Tooltip("Valeur de départ (en secondes)")]
-    public int startSeconds = 120;
-    [Tooltip("Si coché: compte à rebours. Sinon: compte vers le haut.")]
-    public bool countDown = true;
-    [Tooltip("Démarrer automatiquement à l'entrée en jeu")]
-    public bool autoStart = true;
+    public float startTime = 120f;
+    public TextMeshProUGUI timerText;
 
-    [Header("Persistence & Scènes")]
-    [Tooltip("Garder ce HUD entre les scènes (un seul exemplaire)")]
-    public bool persistAcrossScenes = true;
-    [Tooltip("Met automatiquement le timer en pause dans ces scènes")]
-    public bool stopOnWinOrGameOver = true;
-    public string winSceneName = "Win";
-    public string gameOverSceneName = "GameOver";
+    float currentTime;
+    bool isRunning = true;
 
-    [Header("Colors")]
-    public Color normalColor = Color.white;
-    public Color timeUpColor = Color.red;
-
-    // --- interne ---
-    private static TimerUI Instance;          // pour éviter les doublons si persistant
-    private float time;                        // temps courant en secondes
-    private bool running;                      // le timer tourne ?
-
-    void Awake()
+    void Start()
     {
-        // Singleton persistant (optionnel)
-        if (persistAcrossScenes)
-        {
-            if (Instance != null && Instance != this)
-            {
-                Destroy(gameObject);
-                return;
-            }
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-
-        if (!label) label = GetComponentInChildren<TextMeshProUGUI>(true);
-        if (label) label.color = normalColor;
-
-        ResetTimer(autoStart);
-
-        // Réagit au changement de scène (pause sur Win/GameOver)
-        SceneManager.activeSceneChanged += OnSceneChanged;
-    }
-
-    void OnDestroy()
-    {
-        SceneManager.activeSceneChanged -= OnSceneChanged;
-        if (Instance == this) Instance = null;
+        currentTime = startTime;
+        isRunning = true;
     }
 
     void Update()
     {
-        if (!running) return;
+        if (!isRunning) return;
 
-        if (countDown)
-            time -= Time.deltaTime;
-        else
-            time += Time.deltaTime;
-
-        // Arrivé à 0 en mode compte à rebours
-        if (countDown && time <= 0f)
+        currentTime -= Time.deltaTime;
+        if (currentTime <= 0f)
         {
-            time = 0f;
-            running = false;
-            UpdateLabel();
-
-            // Charger GameOver si un nom est fourni
-            if (!string.IsNullOrEmpty(gameOverSceneName))
-                SceneManager.LoadScene(gameOverSceneName);
-
-            return;
+            currentTime = 0f;
+            isRunning = false;
         }
 
-        UpdateLabel();
+        // Ã  chaque frame on sauve la valeur pour les autres scÃ¨nes
+        TimerStorage.lastTime = currentTime;
+
+        UpdateText();
     }
 
-    private void UpdateLabel()
+    void UpdateText()
     {
-        // Affichage mm:ss (arrondi supérieur pour un rebours plus naturel)
-        int t = Mathf.Max(0, (int)Mathf.Ceil(time));
-        int mm = t / 60;
-        int ss = t % 60;
+        if (timerText == null) return;
 
-        if (label)
-        {
-            label.text = $"{mm:00}:{ss:00}";
-            // Rouge quand on est à 0 en mode compte à rebours
-            label.color = (countDown && t <= 0) ? timeUpColor : normalColor;
-        }
+        int m = Mathf.FloorToInt(currentTime / 60f);
+        int s = Mathf.FloorToInt(currentTime % 60f);
+        timerText.text = m.ToString("00") + ":" + s.ToString("00");
     }
 
-    private void OnSceneChanged(Scene from, Scene to)
+    public void ResetTimer()
     {
-        if (!stopOnWinOrGameOver) return;
-
-        var name = to.name;
-        if (name == winSceneName || name == gameOverSceneName)
-        {
-            running = false;           // pause (il reste visible)
-            UpdateLabel();
-        }
+        currentTime = startTime;
+        isRunning = true;
+        UpdateText();
     }
 
-    // --- API publique pratique ---
-    public void StartTimer() { running = true; }
-    public void StopTimer() { running = false; }
-    public void ResetTimer(bool autoRun = false)
+    public void StopTimer()
     {
-        time = Mathf.Max(0, startSeconds);
-        running = autoRun;
-        UpdateLabel();
+        isRunning = false;
     }
-
-    // Pour ajuster dynamiquement si besoin
-    public void SetSeconds(float seconds, bool autoRun)
-    {
-        time = Mathf.Max(0f, seconds);
-        running = autoRun;
-        UpdateLabel();
-    }
-
-    public float CurrentSeconds() => time;
 }
